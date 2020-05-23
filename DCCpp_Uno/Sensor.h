@@ -17,7 +17,7 @@ Part of DCC++ BASE STATION for the Arduino
 struct SensorData {
   int snum;
   byte pin;
-  byte pullUp;
+  int mode;
 };
 
 struct Sensor{
@@ -25,6 +25,8 @@ struct Sensor{
   SensorData data;
   boolean active;
   float signal;
+  float aqv;
+  float aqc;
   Sensor *nextSensor;
   static void load();
   static void store();
