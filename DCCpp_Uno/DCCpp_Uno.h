@@ -33,7 +33,7 @@ Part of DCC++ BASE STATION for the Arduino
   #define DCC_SIGNAL_PIN_MAIN 10          // Ardunio Uno  - uses OC1B
   #define DCC_SIGNAL_PIN_PROG 5           // Arduino Uno  - uses OC0B
 
-  #if COMM_INTERFACE != 0                 // Serial was not selected
+  #if !(COMM_INTERFACE == 0 || COMM_INTERFACE == 4)  // Serial was not selected
 
     #error CANNOT COMPILE - DCC++ FOR THE UNO CAN ONLY USE SERIAL COMMUNICATION - PLEASE SELECT THIS IN THE CONFIG FILE
 

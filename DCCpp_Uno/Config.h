@@ -60,8 +60,8 @@ Part of DCC++ BASE STATION for the Arduino
 // DEFINE PINS FOR SOFTWARE SERIAL
 //
 
-#define SOFTWARE_SERIAL_RX 30
-#define SOFTWARE_SERIAL_TX 31
+#define SOFTWARE_SERIAL_RX 6
+#define SOFTWARE_SERIAL_TX 7
 #define SOFTWARE_SERIAL_BAUDRATE 115200
 
 /////////////////////////////////////////////////////////////////////////////////////
