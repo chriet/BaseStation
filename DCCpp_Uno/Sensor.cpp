@@ -62,23 +62,99 @@ decide to ignore the <q ID> return and only react to <Q ID> triggers.
 #include "Comm.h"
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// Sampling Parameters
+const unsigned long sampleTime = 2000UL; 
+const unsigned long numSamples = 100UL; 
+const unsigned long sampleInterval = sampleTime/numSamples; 
+
+#define SENSITIVITY 5000
+#define DETECTION_MULTIPLIER 1.3
+#define CALIBRATION_READS 300
+
+float readCurrent(int pin, float adc_zero) {
+  float currentAcc = 0;
+  unsigned int count = 0;
+  unsigned long prevMicros = micros() - sampleInterval ;
+  while (count < numSamples)
+  {
+    if (micros() - prevMicros >= sampleInterval)
+    {
+      float adc_raw = (float) analogRead(pin) - adc_zero; // sensor reading in volts
+      adc_raw /= SENSITIVITY; // convert to amperes
+      currentAcc += (adc_raw * adc_raw); // sum the squares
+      count++;
+      prevMicros += sampleInterval;
+    }
+  }
+  //https://en.wikipedia.org/wiki/Root_mean_square
+  float rms = sqrt((float)currentAcc / (float)numSamples);
+  return rms;
+}
+
+//////////////////////////////////////////
+// Calibration
+// Track Power must be OFF during calibration
+//////////////////////////////////////////
+
+float determineVQ(int pin) {
+  float VQ = 0;
+  //read a large number of samples to stabilize value
+  for (int i = 0; i < CALIBRATION_READS; i++) {
+    VQ += analogRead(pin);
+    delayMicroseconds(sampleInterval);
+  }
+  VQ /= CALIBRATION_READS;
+  return VQ;
+}
+
+float determineCQ(int pin, float aqv) {
+  float CQ = 0;
+  // set reps so the total actual analog reads == CALIBRATION_READS
+  int reps = (CALIBRATION_READS / numSamples);
+  for (int i = 0; i < reps; i++) {
+    CQ += readCurrent(pin, aqv);
+  }
+  CQ /= reps;
+  return CQ;
+}
+
+///////////////////////////////////////////////////////////////////////////////
   
 void Sensor::check(){    
   Sensor *tt;
 
   for(tt=firstSensor;tt!=NULL;tt=tt->nextSensor){
-    tt->signal=tt->signal*(1.0-SENSOR_DECAY)+digitalRead(tt->data.pin)*SENSOR_DECAY;
-    
-    if(!tt->active && tt->signal<0.5){
-      tt->active=true;
-      INTERFACE.print("<Q");
-      INTERFACE.print(tt->data.snum);
-      INTERFACE.print(">");
-    } else if(tt->active && tt->signal>0.9){
-      tt->active=false;
-      INTERFACE.print("<q");
-      INTERFACE.print(tt->data.snum);
-      INTERFACE.print(">");
+    if(tt->data.mode == 2) {
+      float current = readCurrent(tt->data.pin, tt->aqv);
+      float delta = abs(tt->aqc - current);
+      boolean active = delta > ((tt->aqc * DETECTION_MULTIPLIER) - tt->aqc);
+
+      if(!tt->active && active){
+        tt->active=true;
+        INTERFACE.print("<Q");
+        INTERFACE.print(tt->data.snum);
+        INTERFACE.print(">");
+      } else if(tt->active && !active){
+        tt->active=false;
+        INTERFACE.print("<q");
+        INTERFACE.print(tt->data.snum);
+        INTERFACE.print(">");
+      }
+    } else {
+      tt->signal = tt->signal*(1.0-SENSOR_DECAY)+digitalRead(tt->data.pin)*SENSOR_DECAY;
+
+      if(!tt->active && tt->signal<0.5){
+        tt->active=true;
+        INTERFACE.print("<Q");
+        INTERFACE.print(tt->data.snum);
+        INTERFACE.print(">");
+      } else if(tt->active && tt->signal>0.9){
+        tt->active=false;
+        INTERFACE.print("<q");
+        INTERFACE.print(tt->data.snum);
+        INTERFACE.print(">");
+      }
     }
   } // loop over all sensors
     
@@ -86,7 +162,7 @@ void Sensor::check(){
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Sensor *Sensor::create(int snum, int pin, int pullUp, int v){
+Sensor *Sensor::create(int snum, int pin, int mode, int v){
   Sensor *tt;
   
   if(firstSensor==NULL){
@@ -108,11 +184,19 @@ Sensor *Sensor::create(int snum, int pin, int pullUp, int v){
   
   tt->data.snum=snum;
   tt->data.pin=pin;
-  tt->data.pullUp=(pullUp==0?LOW:HIGH);
+  tt->data.mode=mode;
   tt->active=false;
   tt->signal=1;
   pinMode(pin,INPUT);         // set mode to input
-  digitalWrite(pin,pullUp);   // don't use Arduino's internal pull-up resistors for external infrared sensors --- each sensor must have its own 1K external pull-up resistor
+
+  if(mode == 2) {
+    tt->aqv = determineVQ(pin);
+    tt->aqc = determineCQ(pin, tt->aqv);
+  } else {
+    tt->aqv=0;
+    tt->aqc=0;
+    digitalWrite(pin,mode==0 ? LOW : HIGH);   // don't use Arduino's internal pull-up resistors for external infrared sensors --- each sensor must have its own 1K external pull-up resistor
+  }
 
   if(v==1)
     INTERFACE.print("<O>");
@@ -165,7 +249,7 @@ void Sensor::show(){
     INTERFACE.print(" ");
     INTERFACE.print(tt->data.pin);
     INTERFACE.print(" ");
-    INTERFACE.print(tt->data.pullUp);
+    INTERFACE.print(tt->data.mode);
     INTERFACE.print(">");
   }
 }
@@ -221,7 +305,11 @@ void Sensor::load(){
 
   for(int i=0;i<EEStore::eeStore->data.nSensors;i++){
     EEPROM.get(EEStore::pointer(),data);  
-    tt=create(data.snum,data.pin,data.pullUp);
+    tt=create(
+      data.snum,
+      data.pin,
+      data.mode
+    );
     EEStore::advance(sizeof(tt->data));
   }  
 }
@@ -245,4 +333,3 @@ void Sensor::store(){
 ///////////////////////////////////////////////////////////////////////////////
 
 Sensor *Sensor::firstSensor=NULL;
-
