@@ -64,26 +64,29 @@ decide to ignore the <q ID> return and only react to <Q ID> triggers.
 ///////////////////////////////////////////////////////////////////////////////
 
 // Sampling Parameters
-const unsigned long sampleTime = 2000UL; 
-const unsigned long numSamples = 100UL; 
-const unsigned long sampleInterval = sampleTime/numSamples; 
+const unsigned long sampleTime = 58000UL; // 58 ms
+const unsigned long numSamples = 300UL; 
+// sample interval is in microseconds
+// must be greater than 100μs, the conversion time of the internal ADC
+const unsigned long sampleInterval = sampleTime/numSamples;
 
-#define SENSITIVITY 5000
-#define DETECTION_MULTIPLIER 1.3
-#define CALIBRATION_READS 300
+#define SENSITIVITY 185 // per ACS712 5A data sheet, in mv/A
+#define DETECTION_MULTIPLIER 1.2   // 1.095 // change as necessary to improve detection accuracy
+#define CALIBRATION_READS 5000
 
-float readCurrent(int pin, float adc_zero) {
+//////////////////////////////////////////
+// ACS712 Current Sensor Functions
+//////////////////////////////////////////
+float readCurrent(int PIN, float adc_zero) {
   float currentAcc = 0;
   unsigned int count = 0;
   unsigned long prevMicros = micros() - sampleInterval ;
-  while (count < numSamples)
-  {
-    if (micros() - prevMicros >= sampleInterval)
-    {
-      float adc_raw = (float) analogRead(pin) - adc_zero; // sensor reading in volts
+  while (count < numSamples)   {
+    if (micros() - prevMicros >= sampleInterval)    {
+      float adc_raw = (float) analogRead(PIN) - adc_zero;
       adc_raw /= SENSITIVITY; // convert to amperes
-      currentAcc += (adc_raw * adc_raw); // sum the squares
-      count++;
+      currentAcc += (adc_raw * adc_raw);
+      ++count;
       prevMicros += sampleInterval;
     }
   }
@@ -97,15 +100,15 @@ float readCurrent(int pin, float adc_zero) {
 // Track Power must be OFF during calibration
 //////////////////////////////////////////
 
-float determineVQ(int pin) {
+int determineVQ(int PIN) {
   float VQ = 0;
   //read a large number of samples to stabilize value
   for (int i = 0; i < CALIBRATION_READS; i++) {
-    VQ += analogRead(pin);
+    VQ += analogRead(PIN);
     delayMicroseconds(sampleInterval);
   }
   VQ /= CALIBRATION_READS;
-  return VQ;
+  return int(VQ);
 }
 
 float determineCQ(int pin, float aqv) {
@@ -127,8 +130,7 @@ void Sensor::check(){
   for(tt=firstSensor;tt!=NULL;tt=tt->nextSensor){
     if(tt->data.mode == 2) {
       float current = readCurrent(tt->data.pin, tt->aqv);
-      float delta = abs(tt->aqc - current);
-      boolean active = delta > ((tt->aqc * DETECTION_MULTIPLIER) - tt->aqc);
+      boolean active = current) / 2 > (tt->aqc * DETECTION_MULTIPLIER);
 
       if(!tt->active && active){
         tt->active=true;
@@ -192,6 +194,12 @@ Sensor *Sensor::create(int snum, int pin, int mode, int v){
   if(mode == 2) {
     tt->aqv = determineVQ(pin);
     tt->aqc = determineCQ(pin, tt->aqv);
+
+    Serial.print("ACS calibrated: aqv: [");
+    Serial.print(tt->aqv);
+    Serial.print("] aqc: [");
+    Serial.print(tt->aqc, 4);
+    Serial.println("]");
   } else {
     tt->aqv=0;
     tt->aqc=0;

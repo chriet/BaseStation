@@ -46,15 +46,18 @@ void SerialCommand::process(){
   char c;
     
   #if (COMM_TYPE == 0) || (COMM_TYPE == 2)
-
     while(INTERFACE.available()>0){    // while there is data on the serial line
      c=INTERFACE.read();
-     if(c=='<')                    // start of new command
+
+     if(c=='<') {                   // start of new command
        sprintf(commandString,"");
-     else if(c=='>')               // end of new command
+     } else if(c=='>') {               // end of new command
+       Serial.print("accepting command: ");
+       Serial.println(commandString);
        parse(commandString);                    
-     else if(strlen(commandString)<MAX_COMMAND_LENGTH)    // if comandString still has space, append character just read from serial line
+     } else if(strlen(commandString)<MAX_COMMAND_LENGTH) {   // if comandString still has space, append character just read from serial line
        sprintf(commandString,"%s%c",commandString,c);     // otherwise, character is ignored (but continue to look for '<' or '>')
+     }
     } // while
   
   #elif COMM_TYPE == 1
@@ -388,6 +391,8 @@ void SerialCommand::parse(char *com){
       #elif COMM_TYPE == 1
         INTERFACE.print(Ethernet.localIP());
         INTERFACE.print(">");
+      #elif COMM_TYPE == 2
+        INTERFACE.print("SOFTWARESERIAL>");
       #endif
       
       Turnout::show();
@@ -567,5 +572,3 @@ void SerialCommand::parse(char *com){
 }; // SerialCommand::parse
 
 ///////////////////////////////////////////////////////////////////////////////
-
-
