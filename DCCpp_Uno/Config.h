@@ -62,8 +62,6 @@ Part of DCC++ BASE STATION for the Arduino
 
 #define SOFTWARE_SERIAL_RX 6
 #define SOFTWARE_SERIAL_TX 7
-#define SOFTWARE_SERIAL_BAUDRATE 115200
+#define SOFTWARE_SERIAL_BAUDRATE 9600
 
 /////////////////////////////////////////////////////////////////////////////////////
-
-
