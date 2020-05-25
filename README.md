@@ -12,6 +12,10 @@ The DCC++ Controller provides operators with a customizable GUI to control their
 What’s in this Repository
 -------------------------
 
+This fork contains
+- an extra communication type (4) to interfacce with a software serial (for example for communication with an esp chip for wifi)
+- An option to define a sensor (mode 2) for currency detection with an acs722 chip
+
 This repository, BaseStation-Uno, contains a complete DCC++ Base Station sketch designed for compiling and uploading into an Arduino Uno.  All sketch files are in the folder named DCCpp_Uno. More information about the sketch can be found in the included PDF file.
 
 To utilize this sketch, simply download a zip file of this repository and open the file DCCpp_Uno.ino within the DCCpp_Uno folder using your Arduino IDE.  Please do not rename the folder containing the sketch code, nor add any files to that folder.  The Arduino IDE relies on the structure and name of the folder to properly display and compile the code.
