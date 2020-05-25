@@ -130,7 +130,7 @@ void Sensor::check(){
   for(tt=firstSensor;tt!=NULL;tt=tt->nextSensor){
     if(tt->data.mode == 2) {
       float current = readCurrent(tt->data.pin, tt->aqv);
-      boolean active = current) / 2 > (tt->aqc * DETECTION_MULTIPLIER);
+      boolean active = current > (tt->aqc * DETECTION_MULTIPLIER);
 
       if(!tt->active && active){
         tt->active=true;
