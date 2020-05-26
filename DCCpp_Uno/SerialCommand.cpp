@@ -45,7 +45,7 @@ void SerialCommand::init(volatile RegisterList *_mRegs, volatile RegisterList *_
 void SerialCommand::process(){
   char c;
     
-  #if (COMM_TYPE == 0)
+  #if (COMM_TYPE == 0) || (COMM_TYPE == 2)
     while(INTERFACE.available()>0){    // while there is data on the serial line
      c=INTERFACE.read();
 
@@ -391,6 +391,8 @@ void SerialCommand::parse(char *com){
       #elif COMM_TYPE == 1
         INTERFACE.print(Ethernet.localIP());
         INTERFACE.print(">");
+      #elif COMM_TYPE == 2	
+        INTERFACE.print("SOFTWARESERIAL>");        
       #endif
       
       Turnout::show();

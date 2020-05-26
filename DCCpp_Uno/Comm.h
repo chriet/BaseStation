@@ -28,4 +28,7 @@ Part of DCC++ BASE STATION for the Arduino
   #endif
 
   extern EthernetServer INTERFACE;
-#endif
+#elif COMM_TYPE == 2
+  #include <SoftwareSerial.h>	
+  extern SoftwareSerial INTERFACE;
+#endif  
